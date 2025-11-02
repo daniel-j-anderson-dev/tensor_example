@@ -23,7 +23,7 @@ pub fn Tensor(T: type, shape_: []const usize) type {
         }
         pub const ElementType = T;
 
-        elements: *[]T, // use of the `T` parameter
+        elements: *[]ElementType, // use of the `T` parameter
 
         /// The rank of a `Tensor` is the number of dimensions
         pub const rank = shape.len;
@@ -34,8 +34,8 @@ pub fn Tensor(T: type, shape_: []const usize) type {
 
         /// allocates memory needed to store `number_of_elements` `T` values.
         /// calls `f` for at each index to determine the value of the `Tensor` there
-        pub fn initFromFunction(allocator: Allocator, elementFunction: fn (*const Index) anyerror!T) !Self {
-            var elements = try ArrayList(T).initCapacity(allocator, number_of_elements);
+        pub fn initFromFunction(allocator: Allocator, elementFunction: fn (*const Index) anyerror!ElementType) !Self {
+            var elements = try ArrayList(ElementType).initCapacity(allocator, number_of_elements);
             var index_iterator = indexes();
             while (index_iterator.next()) |index|
                 try elements.append(allocator, try elementFunction(&index));
@@ -47,7 +47,7 @@ pub fn Tensor(T: type, shape_: []const usize) type {
             return Self.initFromFunction(
                 allocator,
                 struct {
-                    pub fn f(_: *const Index) anyerror!T {
+                    pub fn f(_: *const Index) anyerror!ElementType {
                         return 0;
                     }
                 }.f,
@@ -91,10 +91,10 @@ pub fn Tensor(T: type, shape_: []const usize) type {
             return deserialized_index;
         }
 
-        pub fn get(self: *Self, index: *const Index) error{IndexOutOfBounds}!*T {
+        pub fn get(self: *Self, index: *const Index) error{IndexOutOfBounds}!*ElementType {
             return &self.elements.items[try serializeIndex(index)];
         }
-        pub fn set(self: *Self, index: *const Index, value: T) error{IndexOutOfBounds}!void {
+        pub fn set(self: *Self, index: *const Index, value: ElementType) error{IndexOutOfBounds}!void {
             self.elements.items[try serializeIndex(index)] = value;
         }
     };
