@@ -7,7 +7,10 @@ const array_like = root.array_like;
 
 pub fn Tensor(T: type, shape_: []const usize) type {
     return struct {
+        // TYPES
+
         const Self = @This();
+        pub const ElementType = T;
         pub const Index = [rank]usize;
         pub const IndexIterator = struct {
             current: usize = 0,
@@ -18,12 +21,12 @@ pub fn Tensor(T: type, shape_: []const usize) type {
                 return index;
             }
         };
-        pub fn indexes() IndexIterator {
-            return .{};
-        }
-        pub const ElementType = T;
 
-        elements: *[]ElementType, // use of the `T` parameter
+        // FIELDS
+
+        elements: []ElementType, // use of the `T` parameter
+
+        // CONSTANTS
 
         /// The rank of a `Tensor` is the number of dimensions
         pub const rank = shape.len;
@@ -32,6 +35,8 @@ pub fn Tensor(T: type, shape_: []const usize) type {
         /// the total number of elements in a `Tensor`
         pub const number_of_elements = array_like.product(shape);
 
+        // FUNCTIONS
+
         /// allocates memory needed to store `number_of_elements` `T` values.
         /// calls `f` for at each index to determine the value of the `Tensor` there
         pub fn initFromFunction(allocator: Allocator, elementFunction: fn (*const Index) anyerror!ElementType) !Self {
@@ -39,7 +44,7 @@ pub fn Tensor(T: type, shape_: []const usize) type {
             var index_iterator = indexes();
             while (index_iterator.next()) |index|
                 try elements.append(allocator, try elementFunction(&index));
-            return .{ .elements = elements.toOwnedSlice() };
+            return .{ .elements = try elements.toOwnedSlice(allocator) };
         }
         /// allocates memory needed to store `number_of_elements` `T`.
         /// all values are set to zero
@@ -53,6 +58,7 @@ pub fn Tensor(T: type, shape_: []const usize) type {
                 }.f,
             );
         }
+        /// `Allocator.free`s `self.elements` and sets `self` to `undefined`
         pub fn deinit(self: *Self, allocator: Allocator) void {
             allocator.free(self.elements);
             self.* = undefined;
@@ -72,6 +78,7 @@ pub fn Tensor(T: type, shape_: []const usize) type {
 
             return serialized_index;
         }
+
         pub fn deserializeIndex(index: usize) error{IndexOutOfBounds}![rank]usize {
             if (index >= number_of_elements) return error.IndexOutOfBounds;
 
@@ -94,8 +101,13 @@ pub fn Tensor(T: type, shape_: []const usize) type {
         pub fn get(self: *Self, index: *const Index) error{IndexOutOfBounds}!*ElementType {
             return &self.elements.items[try serializeIndex(index)];
         }
+
         pub fn set(self: *Self, index: *const Index, value: ElementType) error{IndexOutOfBounds}!void {
             self.elements.items[try serializeIndex(index)] = value;
+        }
+
+        pub fn indexes() IndexIterator {
+            return .{};
         }
     };
 }
@@ -149,7 +161,7 @@ test "from function" {
     );
     defer actual_identity.deinit(test_allocator);
     const expected_identity = [ExampleTensor.number_of_elements]f32{ 1, 0, 0, 0, 1, 0, 0, 0, 1 };
-    try expect(std.mem.eql(f32, actual_identity.elements.items, &expected_identity));
+    try expect(std.mem.eql(f32, actual_identity.elements, &expected_identity));
 }
 
 test "zeros" {
@@ -161,7 +173,7 @@ test "zeros" {
         0, 0, 0,
         0, 0, 0,
     };
-    try expect(std.mem.eql(f32, actual_zeros.elements.items, &expected_zeros));
+    try expect(std.mem.eql(f32, actual_zeros.elements, &expected_zeros));
 }
 
 test "constants" {
