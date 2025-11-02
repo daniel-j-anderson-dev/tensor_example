@@ -19,7 +19,7 @@ pub fn ElementType(ArrayLike: type) type {
         },
         else => {},
     }
-    @compileError("product is only defined for array-like types");
+    @compileError("ElementType is only defined for array-like types");
 }
 
 /// returns `true` if all values in `xs` are equal
