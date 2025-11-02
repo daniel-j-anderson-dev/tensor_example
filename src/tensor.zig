@@ -5,17 +5,23 @@ const ArrayList = std.ArrayList;
 const root = @import("root.zig");
 const array_like = root.array_like;
 
+/// A multidimensional array backed up by a slice allocated by `ArrayList(T)`. deinitialize with `Tensor(T, shape).deinit`
 pub fn Tensor(T: type, shape_: []const usize) type {
     return struct {
         // TYPES
 
         const Self = @This();
+
+        /// The `type` of values of this `Tensor`
         pub const ElementType = T;
+        /// A type alias for an array of `rank` `usize`s
         pub const Index = [rank]usize;
+        /// An iterator that will go over each `Index` in a dimension0 major order (last dimension changes the fastest and first dimension changes the slowest).
         pub const IndexIterator = struct {
+            /// the current serialized index that this iterator is going to yield next
             current: usize = 0,
+            /// returns the next `Index` in this iterator or `null` if the iterator is empty
             pub fn next(self: *@This()) ?Index {
-                // if (self.current >= number_of_elements) return null;
                 const index = deserializeIndex(self.current) catch return null;
                 self.current += 1;
                 return index;
@@ -24,15 +30,16 @@ pub fn Tensor(T: type, shape_: []const usize) type {
 
         // FIELDS
 
+        /// `T` values in dimension0 major order
         elements: []ElementType, // use of the `T` parameter
 
         // CONSTANTS
 
         /// The rank of a `Tensor` is the number of dimensions
         pub const rank = shape.len;
-        /// The length of each dimension of a `Tensor`
+        /// The length of each dimension of this `Tensor`
         pub const shape = shape_;
-        /// the total number of elements in a `Tensor`
+        /// the total number of elements in this `Tensor`
         pub const number_of_elements = array_like.product(shape);
 
         // FUNCTIONS
@@ -64,6 +71,7 @@ pub fn Tensor(T: type, shape_: []const usize) type {
             self.* = undefined;
         }
 
+        /// Convert a `Index` to a `usize` (dimension0 major)
         pub fn serializeIndex(index: *const Index) error{IndexOutOfBounds}!usize {
             var serialized_index: usize = 0;
             var stride: usize = 1;
@@ -79,7 +87,8 @@ pub fn Tensor(T: type, shape_: []const usize) type {
             return serialized_index;
         }
 
-        pub fn deserializeIndex(index: usize) error{IndexOutOfBounds}![rank]usize {
+        /// Convert a `usize` (dimension0 major) to a `Index`
+        pub fn deserializeIndex(index: usize) error{IndexOutOfBounds}!Index {
             if (index >= number_of_elements) return error.IndexOutOfBounds;
 
             var deserialized_index: Index = undefined;
@@ -98,14 +107,18 @@ pub fn Tensor(T: type, shape_: []const usize) type {
             return deserialized_index;
         }
 
-        pub fn get(self: *Self, index: *const Index) error{IndexOutOfBounds}!*ElementType {
+        /// returns an a immutable pointer to a specific element of this `Tensor`
+        pub fn get(self: *const Self, index: *const Index) error{IndexOutOfBounds}!*const ElementType {
             return &self.elements.items[try serializeIndex(index)];
         }
 
+        /// returns an a pointer to a specific element of this `Tensor`
         pub fn set(self: *Self, index: *const Index, value: ElementType) error{IndexOutOfBounds}!void {
             self.elements.items[try serializeIndex(index)] = value;
         }
 
+        /// Returns an iterator that will go over each `Index` in a dimension0 major order (last dimension changes the fastest and first dimension changes the slowest).
+        /// call `IndexIterator.next` to consume the next element of the iterator. `IndexIterator.next` will return null when there are no indexes left
         pub fn indexes() IndexIterator {
             return .{};
         }
