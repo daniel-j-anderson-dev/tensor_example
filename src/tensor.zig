@@ -2,6 +2,13 @@ const std: type = @import("std");
 const Allocator: type = std.mem.Allocator;
 const ArrayList: fn (type) type = std.ArrayList;
 
+/// Calculates the product of all elements
+fn product(T: type, xs: []const T) T {
+    var p: T = 1;
+    for (xs) |x| p *= x;
+    return p;
+}
+
 pub fn Tensor(T: type, shape_: []const usize) type {
     return struct {
         const Self = @This();
@@ -9,9 +16,11 @@ pub fn Tensor(T: type, shape_: []const usize) type {
 
         elements: ArrayList(T), // use of the `T` parameter
 
+        /// The rank of a `Tensor` is the number of dimensions
         pub const RANK = SHAPE.len;
         pub const SHAPE = shape_;
-        pub const number_of_elements = calculateNumberOfElements();
+        pub const number_of_elements = product(usize, &SHAPE);
+
         pub fn rank(_: *const Self) usize {
             return RANK;
         }
@@ -20,11 +29,6 @@ pub fn Tensor(T: type, shape_: []const usize) type {
         }
         pub fn numberOfElements(_: *const Self) usize {
             return number_of_elements;
-        }
-        fn calculateNumberOfElements() usize {
-            var totalLength: usize = 1;
-            for (SHAPE) |dimensionLength| totalLength *= dimensionLength;
-            return totalLength;
         }
 
         pub fn zeros(allocator: Allocator) Allocator.Error!Self {
@@ -90,7 +94,7 @@ test "serialize index" {
 }
 
 test "deserialize index" {
-    const ExampleTensor = Tensor(f32, &.{ 3, 3, 3 });
+    const ExampleTensor = Tensor(f32, &.{ 13, 3, 9 });
     var serial_index: usize = 0;
     for (0..ExampleTensor.SHAPE[0]) |i| {
         for (0..ExampleTensor.SHAPE[1]) |j| {
@@ -102,4 +106,14 @@ test "deserialize index" {
             }
         }
     }
+}
+
+test "product" {
+    const factorial = struct {
+        fn f(x: anytype) @TypeOf(x) {
+            return if (x == 0) 1 else f(x - 1) * x;
+        }
+    }.f;
+    const xs = [_]usize{ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+    try expect(factorial(xs.len) == product(usize, &xs));
 }
