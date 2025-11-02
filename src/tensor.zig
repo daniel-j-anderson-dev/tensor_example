@@ -36,7 +36,7 @@ pub fn Tensor(T: type, shape_: []const usize) type {
         /// calls `f` for at each index to determine the value of the `Tensor` there
         pub fn initFromFunction(allocator: Allocator, elementFunction: fn (*const Index) anyerror!T) !Self {
             var elements = try ArrayList(T).initCapacity(allocator, number_of_elements);
-            var index_iterator = IndexIterator{};
+            var index_iterator = indexes();
             while (index_iterator.next()) |index|
                 try elements.append(allocator, try elementFunction(&index));
             return .{ .elements = elements.toOwnedSlice() };
