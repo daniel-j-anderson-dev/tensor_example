@@ -1,6 +1,6 @@
-const std: type = @import("std");
-const Allocator: type = std.mem.Allocator;
-const ArrayList: fn (type) type = std.ArrayList;
+const std = @import("std");
+const Allocator = std.mem.Allocator;
+const ArrayList = std.ArrayList;
 
 const root = @import("root.zig");
 const array_like = root.array_like;
