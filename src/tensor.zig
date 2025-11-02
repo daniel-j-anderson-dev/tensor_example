@@ -31,7 +31,7 @@ pub fn Tensor(T: type, shape_: []const usize) type {
         // FIELDS
 
         /// `T` values in dimension0 major order
-        elements: []ElementType, // use of the `T` parameter
+        elements: []ElementType,
 
         // CONSTANTS
 
